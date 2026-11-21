@@ -45,4 +45,6 @@ The script must run the following logic in a continuous loop:
    * Add the AI LLM model name and version to the script.
    * Use the `httparty` Ruby gem to perform all HTTP REST requests.
    * Round down prices and quantities to the maximum allowed precision for each asset.
-   * Don't run or start the implementation for testing. Just use `ruby -c` to check for correctness.
+   * Don't run or start the implementation for testing.
+   * Run `ruby -c` to check for implementation errors.
+   * Run `rufo` to format the implementation.
