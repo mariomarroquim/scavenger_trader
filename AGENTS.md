@@ -51,6 +51,7 @@ the order may have filled in the meantime.
 
 - Don't add any new dependencies without asking first.
 - If the code changes, sync both `AGENTS.md` and `README.md` as well.
+- Run `rufo scavenger_trader.rb` to format the implementation before every commit.
 - Run `ruby -c scavenger_trader.rb` to check for errors before every commit.
 - Don't commit and push changes unless explicitly required.
 - This project only uses the `main` branch; commit and push directly to it.
