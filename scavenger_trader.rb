@@ -1,31 +1,31 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'bigdecimal'
-require 'bigdecimal/util'
-require 'httparty'
-require 'json'
-require 'logger'
-require 'openssl'
-require 'uri'
+require "bigdecimal"
+require "bigdecimal/util"
+require "httparty"
+require "json"
+require "logger"
+require "openssl"
+require "uri"
 
 # ============================================================================
 # Settings
 # ============================================================================
-LLM_MODEL = 'Claude Opus 5.5'
+LLM_MODEL = "Claude Opus 5.5"
 
-API_BASE_URL = 'https://api.binance.com'
-API_KEY = ENV['BINANCE_API_KEY']
-API_SECRET = ENV['BINANCE_API_SECRET']
+API_BASE_URL = "https://api.binance.com"
+API_KEY = ENV["BINANCE_API_KEY"]
+API_SECRET = ENV["BINANCE_API_SECRET"]
 API_RECV_WINDOW = 5_000
 
-SYMBOL = 'ETHBRL'
-BASE_ASSET = 'ETH'
-QUOTE_ASSET = 'BRL'
+SYMBOL = "ETHBRL"
+BASE_ASSET = "ETH"
+QUOTE_ASSET = "BRL"
 
-BUY_DISCOUNT_RATE = BigDecimal('0.99925')
-TAKE_PROFIT_RATE = BigDecimal('1.00225')
-FALLBACK_PROFIT_RATE = BigDecimal('1.0015')
+BUY_DISCOUNT_RATE = BigDecimal("0.99925")
+TAKE_PROFIT_RATE = BigDecimal("1.00225")
+FALLBACK_PROFIT_RATE = BigDecimal("1.0015")
 TAKE_PROFIT_TIMEOUT = 60 * 60
 FALLBACK_PROFIT_TIMEOUT = 60 * 60
 
@@ -35,11 +35,11 @@ NO_FUNDS_INTERVAL = 60
 NETWORK_RETRY_INTERVAL = 5 * 60
 NETWORK_RETRY_TIMEOUT = 60 * 60
 
-LOG_FILE = 'scavenger_trader.log'
+LOG_FILE = "scavenger_trader.log"
 
 LOGGER = Logger.new(LOG_FILE)
 LOGGER.formatter = proc do |severity, time, _program, message|
-  "#{time.strftime('%Y-%m-%d %H:%M:%S')} [#{severity}] #{message}\n"
+  "#{time.strftime("%Y-%m-%d %H:%M:%S")} [#{severity}] #{message}\n"
 end
 
 # ============================================================================
@@ -67,7 +67,7 @@ class BinanceClient
     OpenSSL::SSL::SSLError,
     SocketError,
     Timeout::Error,
-    TransientError
+    TransientError,
   ].freeze
 
   TIMESTAMP_OUTSIDE_RECV_WINDOW = -1021
@@ -106,7 +106,7 @@ class BinanceClient
   end
 
   def perform(method, url)
-    response = HTTParty.send(method, url, headers: { 'X-MBX-APIKEY' => API_KEY })
+    response = HTTParty.send(method, url, headers: { "X-MBX-APIKEY" => API_KEY })
 
     raise TransientError, "Binance is unavailable (HTTP #{response.code})." if response.code >= 500
 
@@ -116,18 +116,18 @@ class BinanceClient
 
     # The local clock drifts away from Binance's (notably after the host
     # sleeps), so the offset is measured again before the retry.
-    if body['code'] == TIMESTAMP_OUTSIDE_RECV_WINDOW
+    if body["code"] == TIMESTAMP_OUTSIDE_RECV_WINDOW
       @clock_offset = nil
-      raise TransientError, "Binance refused the request timestamp: #{body['msg']}"
+      raise TransientError, "Binance refused the request timestamp: #{body["msg"]}"
     end
 
-    raise BinanceError, "Binance refused the request (HTTP #{response.code}): #{body['msg'] || body}."
+    raise BinanceError, "Binance refused the request (HTTP #{response.code}): #{body["msg"] || body}."
   end
 
   def signed_query(params)
     params = params.compact.merge(timestamp:, recvWindow: API_RECV_WINDOW)
     query = URI.encode_www_form(params)
-    signature = OpenSSL::HMAC.hexdigest('SHA256', API_SECRET, query)
+    signature = OpenSSL::HMAC.hexdigest("SHA256", API_SECRET, query)
 
     "#{query}&signature=#{signature}"
   end
@@ -139,7 +139,7 @@ class BinanceClient
 
   def server_clock_offset
     throttle
-    server_time = perform(:get, "#{API_BASE_URL}/api/v3/time")['serverTime']
+    server_time = perform(:get, "#{API_BASE_URL}/api/v3/time")["serverTime"]
 
     server_time - current_millis
   end
@@ -189,7 +189,7 @@ class ScavengerTrader
     return wait_for_funds(budget) if quantity * price < rules.min_notional
 
     @logged_no_funds = false
-    average_buy_price = average_price(await_fill(place_order(side: 'BUY', quantity:, price:)))
+    average_buy_price = average_price(await_fill(place_order(side: "BUY", quantity:, price:)))
 
     sell(average_buy_price, rules) if average_buy_price
   end
@@ -211,12 +211,12 @@ class ScavengerTrader
 
   # A missing order means the remaining position is too small to sell, so there
   # is nothing left to wait for.
-  def sold?(order, timeout:) = order.nil? || await_fill(order, timeout:)['status'] == 'FILLED'
+  def sold?(order, timeout:) = order.nil? || await_fill(order, timeout:)["status"] == "FILLED"
 
   def place_limit_sell(price, rules)
     quantity = sellable_quantity(price, rules)
 
-    place_order(side: 'SELL', quantity:, price:) if quantity
+    place_order(side: "SELL", quantity:, price:) if quantity
   end
 
   # Market orders carry no price, so Binance's average price estimates whether
@@ -224,7 +224,7 @@ class ScavengerTrader
   def place_market_sell(rules)
     quantity = sellable_quantity(current_average_price, rules)
 
-    place_order(side: 'SELL', quantity:) if quantity
+    place_order(side: "SELL", quantity:) if quantity
   end
 
   def sellable_quantity(price, rules)
@@ -239,13 +239,13 @@ class ScavengerTrader
   # Omitting the price places a market order.
   def place_order(side:, quantity:, price: nil)
     @client.post(
-      '/api/v3/order',
+      "/api/v3/order",
       symbol: SYMBOL,
       side:,
-      type: price ? 'LIMIT' : 'MARKET',
-      timeInForce: price && 'GTC',
+      type: price ? "LIMIT" : "MARKET",
+      timeInForce: price && "GTC",
       quantity: format_decimal(quantity),
-      price: price && format_decimal(price)
+      price: price && format_decimal(price),
     )
   end
 
@@ -256,10 +256,10 @@ class ScavengerTrader
     deadline = timeout && Time.now + timeout
 
     loop do
-      return order if FINAL_STATUSES.include?(order['status'])
+      return order if FINAL_STATUSES.include?(order["status"])
 
       if deadline && Time.now >= deadline
-        LOGGER.info("Order #{order['orderId']} is still open after #{timeout}s. Cancelling it.")
+        LOGGER.info("Order #{order["orderId"]} is still open after #{timeout}s. Cancelling it.")
         return cancel(order)
       end
 
@@ -270,42 +270,42 @@ class ScavengerTrader
   end
 
   def cancel(order)
-    canceled = @client.delete('/api/v3/order', symbol: SYMBOL, orderId: order['orderId'])
+    canceled = @client.delete("/api/v3/order", symbol: SYMBOL, orderId: order["orderId"])
     log_status(canceled)
 
     canceled
   rescue BinanceError => error
     # Binance refuses to cancel an order that filled while the request was in
     # flight, so the current state decides what happens next.
-    LOGGER.warn("Order #{order['orderId']} could not be cancelled: #{error.message}")
+    LOGGER.warn("Order #{order["orderId"]} could not be cancelled: #{error.message}")
     current = fetch_order(order)
     log_status(current)
 
     current
   end
 
-  def fetch_order(order) = @client.signed_get('/api/v3/order', symbol: SYMBOL, orderId: order['orderId'])
+  def fetch_order(order) = @client.signed_get("/api/v3/order", symbol: SYMBOL, orderId: order["orderId"])
 
   def symbol_rules
-    symbol = @client.get('/api/v3/exchangeInfo', symbol: SYMBOL)['symbols'].first
-    filters = symbol['filters'].to_h { |filter| [filter['filterType'], filter] }
+    symbol = @client.get("/api/v3/exchangeInfo", symbol: SYMBOL)["symbols"].first
+    filters = symbol["filters"].to_h { |filter| [filter["filterType"], filter] }
 
     SymbolRules.new(
-      BigDecimal(filters.dig('PRICE_FILTER', 'tickSize')),
-      BigDecimal(filters.dig('LOT_SIZE', 'stepSize')),
-      BigDecimal(filters.dig('NOTIONAL', 'minNotional')),
-      symbol['quoteAssetPrecision']
+      BigDecimal(filters.dig("PRICE_FILTER", "tickSize")),
+      BigDecimal(filters.dig("LOT_SIZE", "stepSize")),
+      BigDecimal(filters.dig("NOTIONAL", "minNotional")),
+      symbol["quoteAssetPrecision"]
     )
   end
 
   # Binance's rolling average smooths out momentary spikes in the order book,
   # so a single outlier trade does not set the buy price.
-  def current_average_price = BigDecimal(@client.get('/api/v3/avgPrice', symbol: SYMBOL)['price'])
+  def current_average_price = BigDecimal(@client.get("/api/v3/avgPrice", symbol: SYMBOL)["price"])
 
   def free_balance(asset)
-    balance = @client.signed_get('/api/v3/account')['balances'].find { |item| item['asset'] == asset }
+    balance = @client.signed_get("/api/v3/account")["balances"].find { |item| item["asset"] == asset }
 
-    balance ? BigDecimal(balance['free']) : BigDecimal(0)
+    balance ? BigDecimal(balance["free"]) : BigDecimal(0)
   end
 
   def wait_for_funds(budget)
@@ -318,43 +318,43 @@ class ScavengerTrader
   end
 
   def log_status(order)
-    id = order['orderId']
+    id = order["orderId"]
 
-    return if @logged_statuses[id] == order['status']
+    return if @logged_statuses[id] == order["status"]
 
-    @logged_statuses[id] = order['status']
+    @logged_statuses[id] = order["status"]
     LOGGER.info(
-      "Order #{id} is #{order['status']}: type=#{order['type']} side=#{order['side']} " \
-      "symbol=#{order['symbol']} price=#{executed_price(order)} quantity=#{order['origQty']}"
+      "Order #{id} is #{order["status"]}: type=#{order["type"]} side=#{order["side"]} " \
+      "symbol=#{order["symbol"]} price=#{executed_price(order)} quantity=#{order["origQty"]}"
     )
   end
 
   def average_price(order)
-    executed_quantity = BigDecimal(order['executedQty'])
+    executed_quantity = BigDecimal(order["executedQty"])
 
     if executed_quantity.zero?
-      LOGGER.warn("Order #{order['orderId']} ended as #{order['status']} without any execution.")
+      LOGGER.warn("Order #{order["orderId"]} ended as #{order["status"]} without any execution.")
       return nil
     end
 
-    BigDecimal(order['cummulativeQuoteQty']) / executed_quantity
+    BigDecimal(order["cummulativeQuoteQty"]) / executed_quantity
   end
 
   # Once an order executes, the average price paid is logged instead of the
   # limit price, since partial fills can land at better prices.
   def executed_price(order)
-    executed_quantity = BigDecimal(order['executedQty'].to_s)
+    executed_quantity = BigDecimal(order["executedQty"].to_s)
 
-    return order['price'] if executed_quantity.zero?
+    return order["price"] if executed_quantity.zero?
 
-    format_decimal(BigDecimal(order['cummulativeQuoteQty']) / executed_quantity)
+    format_decimal(BigDecimal(order["cummulativeQuoteQty"]) / executed_quantity)
   end
 
   # Binance rejects any value finer than the asset precision, and rounding up
   # could spend more than the account holds.
   def round_down(value, increment) = (value / increment).floor * increment
 
-  def format_decimal(value) = value.to_s('F')
+  def format_decimal(value) = value.to_s("F")
 end
 
 # ============================================================================
@@ -363,7 +363,7 @@ end
 LOGGER.info("Scavenger Trader started (implemented by #{LLM_MODEL}).")
 
 begin
-  raise 'Missing the BINANCE_API_KEY or BINANCE_API_SECRET environment variables.' if API_KEY.to_s.empty? || API_SECRET.to_s.empty?
+  raise "Missing the BINANCE_API_KEY or BINANCE_API_SECRET environment variables." if API_KEY.to_s.empty? || API_SECRET.to_s.empty?
 
   ScavengerTrader.new.trade
 rescue SignalException => signal
@@ -372,8 +372,8 @@ rescue SignalException => signal
 rescue StandardError => error
   LOGGER.fatal("#{error.class}: #{error.message}")
   LOGGER.fatal(error.backtrace.join("\n")) if error.backtrace
-  LOGGER.info('Scavenger Trader ended.')
+  LOGGER.info("Scavenger Trader ended.")
   exit 1
 end
 
-LOGGER.info('Scavenger Trader ended.')
+LOGGER.info("Scavenger Trader ended.")
