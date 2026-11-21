@@ -47,7 +47,7 @@ request and will not fix itself. Both of those, and anything else, are logged as
 script exits. The one exception is a refused cancel, which `ScavengerTrader#cancel` rescues because
 the order may have filled in the meantime.
 
-## Code conventions
+## Conventions
 
 - Don't add any new dependencies without asking first.
 - If the code changes, sync both `AGENTS.md` and `README.md` as well.
