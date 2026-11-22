@@ -54,4 +54,4 @@ the order may have filled in the meantime.
 - Run `ruby -c scavenger_trader.rb` to check for errors before every commit.
 - Run `rufo scavenger_trader.rb` to format the implementation before every commit.
 - Don't commit and push changes unless explicitly required.
-- This project only uses the `main` branch; commit and push directly to it.
+- This project only uses the `main` branch; commit and push to it when required.
