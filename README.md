@@ -10,4 +10,4 @@ Scavenger Trader is a set of Ruby scripts that trade [ETH/BRL](https://www.binan
 
 ## Support
 
-You can contact me at mariomarroquim@gmail.com.
+You can contact me at [mariomarroquim@gmail.com](mailto:mariomarroquim@gmail.com).
